@@ -1,0 +1,10 @@
+<ivy-module version="2.0">
+  <info organisation="localPlugin" module="Dart" revision="IU-253.28294.334-503.0.0" />
+  <configurations>
+    <conf name="default" visibility="public" />
+  </configurations>
+  <publications>
+    <artifact name="Users/defusername/Documents/DevProjects/flutter_l10n/build/deps/DartPlugin/Dart" ext="directory" conf="default" />
+  </publications>
+  <dependencies />
+</ivy-module>
