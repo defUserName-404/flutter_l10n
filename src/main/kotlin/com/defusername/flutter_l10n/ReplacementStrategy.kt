@@ -7,6 +7,7 @@ object ReplacementStrategy {
         RiverpodRef,
         ContextL10n,
         ContextRaw,
+        StaticError,
     }
 
     data class Result(
@@ -18,6 +19,16 @@ object ReplacementStrategy {
     )
 
     fun resolve(element: PsiElement, key: String, outputClass: String): Result {
+        if (isInStaticContext(element)) {
+            return Result(
+                expression = "/* TODO: '$key' needs l10n — not available in static context */",
+                kind = Kind.StaticError,
+                needsL10nProvidersImport = false,
+                needsAppLocalizationsImport = false,
+                needsL10nExtensionImport = false,
+            )
+        }
+
         val riverpodScope = RiverpodDetector.detect(element)
         val hasContext = ContextDetector.hasBuildContextInScope(element)
 
@@ -26,11 +37,11 @@ object ReplacementStrategy {
             RiverpodDetector.RefScope.NotifierField,
             RiverpodDetector.RefScope.ProviderRefParam,
             -> Result(
-                expression = "ref.watch(l10nProvider).$key",
+                expression = "ref.l10n.$key",
                 kind = Kind.RiverpodRef,
                 needsL10nProvidersImport = true,
                 needsAppLocalizationsImport = false,
-                needsL10nExtensionImport = false,
+                needsL10nExtensionImport = true,
             )
 
             RiverpodDetector.RefScope.None -> {
@@ -44,14 +55,32 @@ object ReplacementStrategy {
                     )
                 } else {
                     Result(
-                        expression = "ref.watch(l10nProvider).$key",
+                        expression = "ref.l10n.$key",
                         kind = Kind.RiverpodRef,
                         needsL10nProvidersImport = true,
                         needsAppLocalizationsImport = false,
-                        needsL10nExtensionImport = false,
+                        needsL10nExtensionImport = true,
                     )
                 }
             }
         }
+    }
+
+    fun isInStaticContext(element: PsiElement): Boolean {
+        var current: PsiElement? = element
+        var depth = 0
+        while (current != null && depth < 12) {
+            val className = current.javaClass.simpleName
+            val text = current.text ?: ""
+            if ((className.contains("Field", ignoreCase = true) ||
+                        className.contains("Declaration", ignoreCase = true)) &&
+                text.contains("static")
+            ) {
+                return true
+            }
+            current = current.parent
+            depth++
+        }
+        return false
     }
 }

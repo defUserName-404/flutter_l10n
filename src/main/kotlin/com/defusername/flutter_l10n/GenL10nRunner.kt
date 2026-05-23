@@ -9,6 +9,7 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
+import java.io.File
 
 object GenL10nRunner {
     fun run(project: Project) {
@@ -19,12 +20,22 @@ object GenL10nRunner {
                 indicator.isIndeterminate = true
                 indicator.text = "Generating localizations..."
 
-                val command = GeneralCommandLine("flutter", "gen-l10n")
+                val flutterPath = resolveFlutter()
+                if (flutterPath == null) {
+                    notify(
+                        project, NotificationType.WARNING, "Flutter L10n",
+                        "Could not find 'flutter' on PATH. " +
+                                "Run 'flutter gen-l10n' manually or set FLUTTER_ROOT environment variable.",
+                    )
+                    return
+                }
+
+                val command = GeneralCommandLine(flutterPath, "gen-l10n")
                     .withWorkDirectory(basePath)
                     .withEnvironment(System.getenv())
 
                 val output = runCatching {
-                    CapturingProcessHandler(command).runProcess(60_000)
+                    CapturingProcessHandler(command).runProcess(120_000)
                 }.getOrNull()
 
                 if (output != null && output.exitCode == 0) {
@@ -33,11 +44,31 @@ object GenL10nRunner {
                 } else {
                     val stderr = output?.stderr.orEmpty().trim()
                     val stdout = output?.stdout.orEmpty().trim()
-                    val message = if (stderr.isNotBlank()) stderr else stdout.ifBlank { "Failed to run flutter gen-l10n." }
-                    notify(project, NotificationType.ERROR, "Flutter L10n", message.takeLast(500))
+                    val message = if (stderr.isNotBlank()) {
+                        if (stderr.contains("untranslated"))
+                            stderr.lines().firstOrNull { it.contains("untranslated") }
+                                ?.let { "$it\nRun flutter gen-l10n manually for full details." }
+                                ?: stderr.takeLast(500)
+                        else stderr.takeLast(500)
+                    } else stdout.ifBlank { "Failed to run flutter gen-l10n." }
+                    notify(project, NotificationType.WARNING, "Flutter L10n", message)
                 }
             }
         })
+    }
+
+    private fun resolveFlutter(): String? {
+        val fromEnv = System.getenv("FLUTTER_ROOT")
+        if (fromEnv != null) {
+            val candidate = "$fromEnv/bin/flutter"
+            if (File(candidate).exists()) return candidate
+        }
+
+        return runCatching {
+            val proc = Runtime.getRuntime().exec(arrayOf("which", "flutter"))
+            proc.waitFor()
+            proc.inputStream.bufferedReader().readText().trim().ifBlank { null }
+        }.getOrNull()
     }
 
     private fun notify(project: Project, type: NotificationType, title: String, content: String) {

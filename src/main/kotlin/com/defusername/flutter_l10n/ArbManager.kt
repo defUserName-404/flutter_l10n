@@ -3,6 +3,7 @@ package com.defusername.flutter_l10n
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import java.io.File
+import org.json.JSONObject
 
 data class ArbEntry(
     val key: String,
@@ -41,9 +42,13 @@ object ArbManager {
                 val file = getOrCreateArbFile(project, config, locale) ?: continue
                 val text = file.readText()
 
+                val existingKeys = parseExistingKeys(text)
+                val newEntries = entries.filter { it.key !in existingKeys }
+                if (newEntries.isEmpty()) continue
+
                 val lastBrace = text.lastIndexOf('}')
                 if (lastBrace < 0) {
-                    file.writeText(buildFreshContent(locale, config, entries))
+                    file.writeText(buildFreshContent(locale, config, newEntries))
                     LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
                     continue
                 }
@@ -55,7 +60,7 @@ object ArbManager {
                 if (hasContent) sb.append(',')
                 sb.append('\n')
 
-                for (entry in entries) {
+                for (entry in newEntries) {
                     val value = when {
                         locale == config.templateLocale -> entry.value
                         entry.translations[locale].isNullOrBlank() -> "TODO(${entry.key}): ${entry.value}"
@@ -75,6 +80,19 @@ object ArbManager {
         }.getOrElse {
             false
         }
+    }
+
+    private fun parseExistingKeys(text: String): Set<String> {
+        return runCatching {
+            val json = JSONObject(text)
+            val keys = mutableSetOf<String>()
+            val iter = json.keys()
+            while (iter.hasNext()) {
+                val key = iter.next()
+                if (!key.startsWith("@") && key != "@@locale") keys.add(key)
+            }
+            keys
+        }.getOrElse { emptySet() }
     }
 
     private fun buildFreshContent(locale: String, config: L10nProjectConfig, entries: List<ArbEntry>): String {

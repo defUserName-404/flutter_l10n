@@ -6,16 +6,20 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import java.awt.BorderLayout
 import java.awt.Dimension
+import java.awt.FlowLayout
+import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 import javax.swing.table.DefaultTableModel
 
 class MultiLocaleDialog(
     project: Project,
     selectedEntries: List<SelectedEntry>,
     availableLocales: List<String>,
-    templateLocale: String,
+    val templateLocale: String,
+    private val translationService: TranslationService = TranslationService(),
 ) : DialogWrapper(project) {
     private val targetLocales = availableLocales.filter { it != templateLocale }
 
@@ -66,10 +70,60 @@ class MultiLocaleDialog(
             preferredSize = Dimension(840, 360)
         }
 
+        val buttonPanel = JPanel(FlowLayout(FlowLayout.LEFT, 8, 4))
+        buildTranslateButtons(buttonPanel)
+
         return JPanel(BorderLayout(0, 8)).apply {
             add(JLabel("Fill translations now or leave blank to insert TODO placeholders."), BorderLayout.NORTH)
             add(scroll, BorderLayout.CENTER)
-            add(JLabel("You can edit ARB files manually anytime."), BorderLayout.SOUTH)
+            add(buttonPanel, BorderLayout.SOUTH)
+        }
+    }
+
+    private fun buildTranslateButtons(panel: JPanel) {
+        for ((idx, locale) in targetLocales.withIndex()) {
+            val name = java.util.Locale(locale).displayLanguage
+            val col = idx + 2
+            val btn = JButton("Auto-translate $name (Ollama)")
+            btn.addActionListener {
+                btn.isEnabled = false
+                btn.text = "Translating..."
+                Thread {
+                    batchTranslateColumn(col, locale)
+                    SwingUtilities.invokeLater {
+                        btn.text = "Auto-translate $name (Ollama)"
+                        btn.isEnabled = true
+                    }
+                }.start()
+            }
+            panel.add(btn)
+        }
+    }
+
+    private data class RowEntry(val index: Int, val source: String)
+
+    private fun batchTranslateColumn(column: Int, targetLocale: String) {
+        val sourceColumn = 1
+        val rows = mutableListOf<RowEntry>()
+        for (row in 0 until tableModel.rowCount) {
+            val source = (tableModel.getValueAt(row, sourceColumn) as? String).orEmpty()
+            val existing = (tableModel.getValueAt(row, column) as? String).orEmpty()
+            if (source.isNotBlank() && existing.isBlank()) {
+                rows.add(RowEntry(row, source))
+            }
+        }
+        if (rows.isEmpty()) return
+
+        val texts = rows.map { it.source }
+        val results = translationService.translateBatch(texts, targetLocale)
+
+        SwingUtilities.invokeLater {
+            for ((i, entry) in rows.withIndex()) {
+                val translation = results.getOrNull(i)
+                if (!translation.isNullOrBlank()) {
+                    tableModel.setValueAt(translation, entry.index, column)
+                }
+            }
         }
     }
 

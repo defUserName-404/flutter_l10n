@@ -67,17 +67,17 @@ class ExtractStringsAction : AnAction() {
                 ReplacementStrategy.resolve(psiAtOffset, entry.key, config.outputClass)
             } else {
                 ReplacementStrategy.Result(
-                    expression = "ref.watch(l10nProvider).${entry.key}",
+                    expression = "ref.l10n.${entry.key}",
                     kind = ReplacementStrategy.Kind.RiverpodRef,
                     needsL10nProvidersImport = true,
                     needsAppLocalizationsImport = false,
-                    needsL10nExtensionImport = false,
+                    needsL10nExtensionImport = true,
                 )
             }
             Resolved(entry.extracted, entry.key, replacement)
         }
 
-        WriteCommandAction.runWriteCommandAction(project, "Extract Strings to L10n", null, Runnable {
+        WriteCommandAction.runWriteCommandAction(project, "Extract Strings to L10n", null, {
             val document = editor.document
             var text = document.text
 
@@ -107,12 +107,17 @@ class ExtractStringsAction : AnAction() {
         val riverpodCount = resolved.count { it.replacement.kind == ReplacementStrategy.Kind.RiverpodRef }
         val contextCount = resolved.count { it.replacement.kind == ReplacementStrategy.Kind.ContextL10n }
         val fallbackCount = resolved.count { it.replacement.kind == ReplacementStrategy.Kind.ContextRaw }
+        val staticErrorCount = resolved.count { it.replacement.kind == ReplacementStrategy.Kind.StaticError }
 
-        Messages.showInfoMessage(
-            project,
-            "Extracted ${resolved.size} string(s). Riverpod: $riverpodCount, context.l10n: $contextCount, fallback: $fallbackCount.",
-            "Flutter L10n",
-        )
+        val message = buildString {
+            append("Extracted ${resolved.size} string(s). ")
+            append("Riverpod: $riverpodCount, context.l10n: $contextCount, fallback: $fallbackCount")
+            if (staticErrorCount > 0) {
+                append(". $staticErrorCount skipped (static context)")
+            }
+            append(".")
+        }
+        Messages.showInfoMessage(project, message, "Flutter L10n")
     }
 
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
