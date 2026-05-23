@@ -1,16 +1,11 @@
-package com.defusername.flutter_l10n
+package com.defusername.flutter_l10n.extraction
 
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.DartStringLiteralExpression
-
-data class ExtractedString(
-    val raw: String,
-    val suggestedKey: String,
-    val startOffset: Int,
-    val endOffset: Int,
-)
+import com.defusername.flutter_l10n.ExtractedString
+import com.defusername.flutter_l10n.KeyGenerator
 
 object PsiStringExtractor {
     fun extract(psiFile: PsiFile): List<ExtractedString> {
@@ -151,30 +146,5 @@ object PsiStringExtractor {
             .replace("\\\"", "\"")
             .replace("\\'", "'")
             .replace("\\\\", "\\")
-    }
-}
-
-object KeyGenerator {
-    fun generate(value: String): String {
-        val words = value
-            .replace(Regex("""[^a-zA-Z0-9\s]"""), " ")
-            .trim()
-            .split(Regex("""\s+"""))
-            .filter { it.isNotBlank() }
-            .take(6)
-
-        if (words.isEmpty()) {
-            return "str${value.hashCode().toString().replace('-', 'n')}"
-        }
-
-        val key = words.mapIndexed { index, word ->
-            if (index == 0) {
-                word.lowercase()
-            } else {
-                word.lowercase().replaceFirstChar { it.uppercase() }
-            }
-        }.joinToString("")
-
-        return if (key.firstOrNull()?.isDigit() == true) "str$key" else key
     }
 }

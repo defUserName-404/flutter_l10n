@@ -1,4 +1,4 @@
-package com.defusername.flutter_l10n
+package com.defusername.flutter_l10n.imports
 
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Document
@@ -7,6 +7,7 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import com.jetbrains.lang.dart.psi.DartImportStatement
+import com.defusername.flutter_l10n.config.L10nProjectConfig
 import java.io.File
 
 object ImportManager {

@@ -1,9 +1,11 @@
-package com.defusername.flutter_l10n
+package com.defusername.flutter_l10n.ui
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
+import com.defusername.flutter_l10n.ExtractedString
+import com.defusername.flutter_l10n.SelectedEntry
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
@@ -18,16 +20,12 @@ import javax.swing.table.DefaultTableModel
 import javax.swing.table.TableCellEditor
 import javax.swing.table.TableCellRenderer
 
-data class SelectedEntry(
-    val extracted: ExtractedString,
-    val editedValue: String,
-    val key: String,
-)
-
 class ExtractStringsDialog(
     project: Project,
     private val extracted: List<ExtractedString>,
 ) : DialogWrapper(project) {
+    private lateinit var table: JBTable
+
     private val tableModel = object : DefaultTableModel(
         arrayOf("Select", "Value", "Key"),
         0,
@@ -43,14 +41,14 @@ class ExtractStringsDialog(
         title = "Extract Strings to L10n"
 
         extracted.forEach { item ->
-            tableModel.addRow(arrayOf(true, item.raw, item.suggestedKey))
+            tableModel.addRow(arrayOf<Any>(true, item.raw, item.suggestedKey))
         }
 
         init()
     }
 
     override fun createCenterPanel(): JComponent {
-        val table = JBTable(tableModel).apply {
+        table = JBTable(tableModel).apply {
             rowHeight = 26
             setCellSelectionEnabled(true)
             putClientProperty("JTable.autoStartsEdit", true)
@@ -100,7 +98,13 @@ class ExtractStringsDialog(
         }
     }
 
+    override fun doOKAction() {
+        commitActiveCellEdit()
+        super.doOKAction()
+    }
+
     fun getSelectedEntries(): List<SelectedEntry> {
+        commitActiveCellEdit()
         val selected = mutableListOf<SelectedEntry>()
 
         for (row in 0 until tableModel.rowCount) {
@@ -115,5 +119,11 @@ class ExtractStringsDialog(
         }
 
         return selected
+    }
+
+    private fun commitActiveCellEdit() {
+        if (::table.isInitialized && table.isEditing) {
+            table.cellEditor?.stopCellEditing()
+        }
     }
 }
