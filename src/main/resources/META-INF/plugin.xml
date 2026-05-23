@@ -42,6 +42,9 @@
             <!-- Right-click context menu inside the editor -->
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
 
+            <!-- Tools menu -->
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+
             <!-- Ctrl+Shift+L on Windows/Linux -->
             <keyboard-shortcut keymap="$default"      first-keystroke="ctrl shift L"/>
             <!-- Cmd+Shift+L on macOS -->
