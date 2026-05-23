@@ -1,4 +1,4 @@
-package com.defusername.flutter_l10n
+package com.defusername.flutter_l10n.config
 
 data class TranslationConfig(
     val ollamaHost: String = "http://localhost:11434",

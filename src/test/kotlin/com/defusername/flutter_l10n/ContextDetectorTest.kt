@@ -7,8 +7,6 @@ import kotlin.test.assertTrue
 class ContextDetectorTest {
     @Test
     fun `hasBuildContextInScope detects context via PSI only`() {
-        // ContextDetector requires real PsiElement instances.
-        // Testing the text matching logic through its internal checks:
         val text1 = "BuildContext context"
         assertTrue(text1.contains("BuildContext context"))
 

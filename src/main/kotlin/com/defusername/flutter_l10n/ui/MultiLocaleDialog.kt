@@ -1,9 +1,11 @@
-package com.defusername.flutter_l10n
+package com.defusername.flutter_l10n.ui
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
+import com.defusername.flutter_l10n.SelectedEntry
+import com.defusername.flutter_l10n.translation.TranslationService
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -19,7 +21,7 @@ class MultiLocaleDialog(
     selectedEntries: List<SelectedEntry>,
     availableLocales: List<String>,
     val templateLocale: String,
-    private val translationService: TranslationService = TranslationService(),
+    private val translationService: TranslationService,
 ) : DialogWrapper(project) {
     private val targetLocales = availableLocales.filter { it != templateLocale }
 

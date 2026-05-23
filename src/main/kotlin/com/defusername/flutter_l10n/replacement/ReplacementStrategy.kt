@@ -1,6 +1,8 @@
-package com.defusername.flutter_l10n
+package com.defusername.flutter_l10n.replacement
 
 import com.intellij.psi.PsiElement
+import com.defusername.flutter_l10n.detection.ContextDetector
+import com.defusername.flutter_l10n.detection.RiverpodDetector
 
 object ReplacementStrategy {
     enum class Kind {
@@ -72,15 +74,30 @@ object ReplacementStrategy {
         while (current != null && depth < 12) {
             val className = current.javaClass.simpleName
             val text = current.text ?: ""
+
             if ((className.contains("Field", ignoreCase = true) ||
-                        className.contains("Declaration", ignoreCase = true)) &&
+                        className.contains("Declaration", ignoreCase = true) ||
+                        className.contains("Variable", ignoreCase = true)) &&
                 text.contains("static")
             ) {
                 return true
             }
+
+            if (className.contains("Method", ignoreCase = true) &&
+                className.contains("Declaration", ignoreCase = true) &&
+                text.contains("static")
+            ) {
+                return true
+            }
+
+            if (text.contains("static const") || text.contains("static final")) {
+                return true
+            }
+
             current = current.parent
             depth++
         }
+
         return false
     }
 }

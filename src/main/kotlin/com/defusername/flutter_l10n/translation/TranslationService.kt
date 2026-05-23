@@ -1,5 +1,6 @@
-package com.defusername.flutter_l10n
+package com.defusername.flutter_l10n.translation
 
+import com.defusername.flutter_l10n.config.TranslationConfig
 import org.json.JSONObject
 import java.net.URI
 import java.net.http.HttpClient
@@ -47,31 +48,9 @@ class TranslationService(
 
             val json = JSONObject(response.body())
             val raw = json.optString("response", "").trim()
-            parseTranslations(raw, texts.size)
+            TranslationResponseParser.parse(raw, texts.size)
         }.getOrElse {
             texts.map { null }
-        }
-    }
-
-    private fun parseTranslations(raw: String, expectedCount: Int): List<String?> {
-        val lines = raw.lines()
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .map { line ->
-                line.removePrefix("- ")
-                    .removePrefix("* ")
-                    .removePrefix("\"")
-                    .removeSuffix("\"")
-                    .removePrefix("'")
-                    .removeSuffix("'")
-                    .trim()
-            }
-            .filter { it.isNotBlank() }
-
-        return if (lines.size >= expectedCount) {
-            lines.take(expectedCount)
-        } else {
-            (lines + List(expectedCount - lines.size) { null }).take(expectedCount)
         }
     }
 }

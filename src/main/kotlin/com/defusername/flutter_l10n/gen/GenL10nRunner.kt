@@ -1,4 +1,4 @@
-package com.defusername.flutter_l10n
+package com.defusername.flutter_l10n.gen
 
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler

@@ -1,4 +1,4 @@
-package com.defusername.flutter_l10n
+package com.defusername.flutter_l10n.detection
 
 import com.intellij.psi.PsiElement
 

@@ -5,10 +5,16 @@
     <vendor>defusername</vendor>
 
     <description><![CDATA[
-        Finds raw strings in Dart files using PSI (not regex), extracts them to ARB
-        localization files, auto-imports AppLocalizations or Riverpod l10nProvider,
-        detects BuildContext / WidgetRef scope, and runs <code>flutter gen-l10n</code>
-        automatically.
+        <p><b>Flutter L10n</b> extracts Dart UI strings into ARB files and rewrites source calls with scope-aware localization access.</p>
+        <ul>
+            <li>Uses Dart PSI (not regex) for reliable string detection.</li>
+            <li>Review dialog lets you edit key and value before extraction.</li>
+            <li>Manual value edits are persisted and upserted into ARB files.</li>
+            <li>Replacement strategy: <code>ref.l10n.key</code> (Riverpod), <code>context.l10n.key</code>, static-skip TODO.</li>
+            <li>Multi-locale translation dialog supports Ollama batch translation.</li>
+            <li>Runs <code>flutter gen-l10n</code> and manages required imports/support files.</li>
+        </ul>
+        <p><b>After install:</b> add <code>l10n.yaml</code>, ensure ARB files exist, and wire <code>l10n_providers.dart</code> in your Flutter app.</p>
     ]]></description>
 
     <!-- Core IntelliJ platform -->
@@ -35,9 +41,9 @@
     <actions>
         <action
             id="FlutterL10n.ExtractStrings"
-            class="com.defusername.flutter_l10n.ExtractStringsAction"
+            class="com.defusername.flutter_l10n.action.ExtractStringsAction"
             text="Extract Strings to L10n"
-            description="Find raw strings and add them to app_en.arb">
+            description="Extract strings to ARB and replace with l10n accessors">
 
             <!-- Right-click context menu inside the editor -->
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>

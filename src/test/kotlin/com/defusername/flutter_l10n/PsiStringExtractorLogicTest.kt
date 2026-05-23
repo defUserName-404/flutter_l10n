@@ -1,5 +1,6 @@
 package com.defusername.flutter_l10n
 
+import com.defusername.flutter_l10n.extraction.PsiStringExtractor
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

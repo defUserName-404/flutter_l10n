@@ -1,5 +1,6 @@
 package com.defusername.flutter_l10n
 
+import com.defusername.flutter_l10n.detection.RiverpodDetector
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
