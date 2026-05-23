@@ -13,7 +13,7 @@ import javax.swing.table.DefaultTableModel
 
 class MultiLocaleDialog(
     project: Project,
-    selectedEntries: List<Pair<ExtractedString, String>>,
+    selectedEntries: List<SelectedEntry>,
     availableLocales: List<String>,
     templateLocale: String,
 ) : DialogWrapper(project) {
@@ -36,10 +36,10 @@ class MultiLocaleDialog(
     init {
         title = "Translations for Other Locales"
 
-        selectedEntries.forEach { (item, key) ->
+        selectedEntries.forEach { entry ->
             val row = MutableList<Any>(columns.size) { "" }
-            row[0] = key
-            row[1] = item.raw
+            row[0] = entry.key
+            row[1] = entry.editedValue
             tableModel.addRow(row.toTypedArray())
         }
 

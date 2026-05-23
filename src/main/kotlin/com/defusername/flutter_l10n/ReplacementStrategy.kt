@@ -44,10 +44,10 @@ object ReplacementStrategy {
                     )
                 } else {
                     Result(
-                        expression = "$outputClass.of(context)!.$key",
-                        kind = Kind.ContextRaw,
-                        needsL10nProvidersImport = false,
-                        needsAppLocalizationsImport = true,
+                        expression = "ref.watch(l10nProvider).$key",
+                        kind = Kind.RiverpodRef,
+                        needsL10nProvidersImport = true,
+                        needsAppLocalizationsImport = false,
                         needsL10nExtensionImport = false,
                     )
                 }

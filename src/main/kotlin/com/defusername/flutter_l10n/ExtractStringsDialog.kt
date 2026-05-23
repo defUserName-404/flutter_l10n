@@ -5,43 +5,45 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import java.awt.BorderLayout
+import java.awt.Component
 import java.awt.Dimension
+import javax.swing.AbstractCellEditor
+import javax.swing.JCheckBox
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JTable
+import javax.swing.SwingConstants
 import javax.swing.table.DefaultTableModel
+import javax.swing.table.TableCellEditor
+import javax.swing.table.TableCellRenderer
+
+data class SelectedEntry(
+    val extracted: ExtractedString,
+    val editedValue: String,
+    val key: String,
+)
 
 class ExtractStringsDialog(
     project: Project,
     private val extracted: List<ExtractedString>,
-    existingKeys: Set<String>,
 ) : DialogWrapper(project) {
     private val tableModel = object : DefaultTableModel(
-        arrayOf("Include", "Raw String", "Generated Key", "Status"),
+        arrayOf("Select", "Value", "Key"),
         0,
     ) {
         override fun getColumnClass(columnIndex: Int): Class<*> {
             return if (columnIndex == 0) Boolean::class.java else String::class.java
         }
 
-        override fun isCellEditable(row: Int, column: Int): Boolean {
-            return column == 0 || column == 2
-        }
+        override fun isCellEditable(row: Int, column: Int): Boolean = true
     }
 
     init {
         title = "Extract Strings to L10n"
 
         extracted.forEach { item ->
-            val keyExists = existingKeys.contains(item.suggestedKey)
-            tableModel.addRow(
-                arrayOf(
-                    !keyExists,
-                    item.raw,
-                    item.suggestedKey,
-                    if (keyExists) "Key already exists" else "New",
-                ),
-            )
+            tableModel.addRow(arrayOf(true, item.raw, item.suggestedKey))
         }
 
         init()
@@ -50,10 +52,41 @@ class ExtractStringsDialog(
     override fun createCenterPanel(): JComponent {
         val table = JBTable(tableModel).apply {
             rowHeight = 26
-            columnModel.getColumn(0).preferredWidth = 70
-            columnModel.getColumn(1).preferredWidth = 320
+            setCellSelectionEnabled(true)
+            putClientProperty("JTable.autoStartsEdit", true)
+            columnModel.getColumn(0).apply {
+                preferredWidth = 60
+                cellRenderer = object : TableCellRenderer {
+                    private val cb = JCheckBox().apply {
+                        isOpaque = true
+                        horizontalAlignment = SwingConstants.CENTER
+                    }
+                    override fun getTableCellRendererComponent(
+                        table: JTable, value: Any?, selected: Boolean, focus: Boolean, row: Int, col: Int,
+                    ): Component {
+                        cb.isSelected = value as? Boolean ?: false
+                        cb.background = if (selected) table.selectionBackground else table.background
+                        return cb
+                    }
+                }
+                cellEditor = object : AbstractCellEditor(), TableCellEditor {
+                    private val cb = JCheckBox().apply {
+                        isOpaque = true
+                        horizontalAlignment = SwingConstants.CENTER
+                        addActionListener { fireEditingStopped() }
+                    }
+                    override fun getCellEditorValue(): Any = cb.isSelected
+                    override fun getTableCellEditorComponent(
+                        table: JTable, value: Any?, isSelected: Boolean, row: Int, column: Int,
+                    ): Component {
+                        cb.isSelected = value as? Boolean ?: false
+                        cb.background = if (isSelected) table.selectionBackground else table.background
+                        return cb
+                    }
+                }
+            }
+            columnModel.getColumn(1).preferredWidth = 350
             columnModel.getColumn(2).preferredWidth = 220
-            columnModel.getColumn(3).preferredWidth = 120
         }
 
         val scroll = JBScrollPane(table).apply {
@@ -61,23 +94,24 @@ class ExtractStringsDialog(
         }
 
         return JPanel(BorderLayout(0, 8)).apply {
-            add(JLabel("Review extracted strings and adjust generated keys before applying."), BorderLayout.NORTH)
+            add(JLabel("Check strings to extract. Edit values and keys as needed."), BorderLayout.NORTH)
             add(scroll, BorderLayout.CENTER)
             add(JLabel("Only checked rows are extracted."), BorderLayout.SOUTH)
         }
     }
 
-    fun getSelectedEntries(): List<Pair<ExtractedString, String>> {
-        val selected = mutableListOf<Pair<ExtractedString, String>>()
+    fun getSelectedEntries(): List<SelectedEntry> {
+        val selected = mutableListOf<SelectedEntry>()
 
         for (row in 0 until tableModel.rowCount) {
             val include = tableModel.getValueAt(row, 0) as? Boolean ?: false
             if (!include) continue
 
+            val value = (tableModel.getValueAt(row, 1) as? String).orEmpty().trim()
             val key = (tableModel.getValueAt(row, 2) as? String).orEmpty().trim()
-            if (key.isBlank()) continue
+            if (value.isBlank() || key.isBlank()) continue
 
-            selected.add(extracted[row] to key)
+            selected.add(SelectedEntry(extracted[row], value, key))
         }
 
         return selected

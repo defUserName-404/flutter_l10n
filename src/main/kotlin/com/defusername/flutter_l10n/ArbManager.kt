@@ -2,7 +2,6 @@ package com.defusername.flutter_l10n
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
-import org.json.JSONObject
 import java.io.File
 
 data class ArbEntry(
@@ -31,57 +30,45 @@ object ArbManager {
         return locales.sorted()
     }
 
-    fun readArb(project: Project, config: L10nProjectConfig, locale: String = config.templateLocale): JSONObject {
-        val file = getArbFile(project, config, locale)
-        if (file == null || !file.exists()) return JSONObject()
-        return runCatching { JSONObject(file.readText()) }.getOrElse { JSONObject() }
-    }
-
-    fun existingMessageKeys(project: Project, config: L10nProjectConfig): Set<String> {
-        val json = readArb(project, config)
-        val keys = mutableSetOf<String>()
-        val iter = json.keys()
-        while (iter.hasNext()) {
-            val key = iter.next()
-            if (!key.startsWith("@")) {
-                keys.add(key)
-            }
-        }
-        return keys
-    }
-
-    fun addEntries(project: Project, config: L10nProjectConfig, entries: List<ArbEntry>): Boolean {
+    fun appendEntries(project: Project, config: L10nProjectConfig, entries: List<ArbEntry>): Boolean {
         if (entries.isEmpty()) return true
+        if (project.basePath == null) return false
 
         val locales = getAvailableLocales(project, config)
 
         return runCatching {
             for (locale in locales) {
                 val file = getOrCreateArbFile(project, config, locale) ?: continue
-                val json = runCatching { JSONObject(file.readText()) }
-                    .getOrElse { JSONObject().put("@@locale", locale) }
+                val text = file.readText()
 
-                for (entry in entries) {
-                    if (!json.has(entry.key)) {
-                        val localizedValue = when {
-                            locale == config.templateLocale -> entry.value
-                            entry.translations[locale].isNullOrBlank() -> "TODO(${entry.key}): ${entry.value}"
-                            else -> entry.translations[locale].orEmpty()
-                        }
-
-                        json.put(entry.key, localizedValue)
-                    }
-
-                    val metaKey = "@${entry.key}"
-                    if (!json.has(metaKey)) {
-                        json.put(
-                            metaKey,
-                            JSONObject().put("description", "Auto-extracted from Dart source"),
-                        )
-                    }
+                val lastBrace = text.lastIndexOf('}')
+                if (lastBrace < 0) {
+                    file.writeText(buildFreshContent(locale, config, entries))
+                    LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
+                    continue
                 }
 
-                file.writeText(json.toString(2) + "\n")
+                val prefix = text.substring(0, lastBrace).trimEnd()
+                val hasContent = !prefix.endsWith("{")
+
+                val sb = StringBuilder(prefix)
+                if (hasContent) sb.append(',')
+                sb.append('\n')
+
+                for (entry in entries) {
+                    val value = when {
+                        locale == config.templateLocale -> entry.value
+                        entry.translations[locale].isNullOrBlank() -> "TODO(${entry.key}): ${entry.value}"
+                        else -> entry.translations[locale].orEmpty()
+                    }
+                    sb.append("  \"${esc(entry.key)}\": \"${esc(value)}\",\n")
+                    sb.append("  \"@${esc(entry.key)}\": {\n")
+                    sb.append("    \"description\": \"Auto-extracted from Dart source\"\n")
+                    sb.append("  },\n")
+                }
+
+                val content = sb.toString().trimEnd(',', '\n', ' ', '\t')
+                file.writeText("$content\n}\n")
                 LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
             }
             true
@@ -89,6 +76,26 @@ object ArbManager {
             false
         }
     }
+
+    private fun buildFreshContent(locale: String, config: L10nProjectConfig, entries: List<ArbEntry>): String {
+        val sb = StringBuilder("{\n  \"@@locale\": \"$locale\"")
+        for (entry in entries) {
+            val value = if (locale == config.templateLocale) entry.value else entry.value
+            sb.append(",\n  \"${esc(entry.key)}\": \"${esc(value)}\",\n")
+            sb.append("  \"@${esc(entry.key)}\": {\n")
+            sb.append("    \"description\": \"Auto-extracted from Dart source\"\n")
+            sb.append("  }")
+        }
+        sb.append("\n}\n")
+        return sb.toString()
+    }
+
+    private fun esc(s: String): String = s
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
 
     private fun getArbFile(project: Project, config: L10nProjectConfig, locale: String): File? {
         val basePath = project.basePath ?: return null
@@ -99,8 +106,7 @@ object ArbManager {
         val file = getArbFile(project, config, locale) ?: return null
         file.parentFile?.mkdirs()
         if (!file.exists()) {
-            val seed = JSONObject().put("@@locale", locale)
-            file.writeText(seed.toString(2) + "\n")
+            file.writeText("{\n  \"@@locale\": \"$locale\"\n}\n")
         }
         return file
     }

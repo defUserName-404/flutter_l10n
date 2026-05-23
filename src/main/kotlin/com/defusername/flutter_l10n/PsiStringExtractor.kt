@@ -44,7 +44,7 @@ object PsiStringExtractor {
         return results
     }
 
-    private fun isInterpolated(literalText: String): Boolean {
+    fun isInterpolated(literalText: String): Boolean {
         return literalText.contains("\${") || Regex("""\$[a-zA-Z_]""").containsMatchIn(literalText)
     }
 
@@ -82,7 +82,7 @@ object PsiStringExtractor {
         return false
     }
 
-    private fun isNonUiText(value: String): Boolean {
+    fun isNonUiText(value: String): Boolean {
         val trimmed = value.trim()
 
         if (trimmed.startsWith("assets/") || trimmed.startsWith("fonts/")) return true
@@ -111,7 +111,7 @@ object PsiStringExtractor {
         return false
     }
 
-    private fun unquote(literalText: String): String? {
+    fun unquote(literalText: String): String? {
         var text = literalText.trim()
         var rawString = false
 

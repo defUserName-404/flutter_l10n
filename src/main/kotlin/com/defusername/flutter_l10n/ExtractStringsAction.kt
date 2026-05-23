@@ -27,8 +27,7 @@ class ExtractStringsAction : AnAction() {
             return
         }
 
-        val existingKeys = ArbManager.existingMessageKeys(project, config)
-        val reviewDialog = ExtractStringsDialog(project, extracted, existingKeys)
+        val reviewDialog = ExtractStringsDialog(project, extracted)
         if (!reviewDialog.showAndGet()) return
 
         val selected = reviewDialog.getSelectedEntries()
@@ -43,15 +42,15 @@ class ExtractStringsAction : AnAction() {
             emptyMap()
         }
 
-        val arbEntries = selected.map { (item, key) ->
+        val arbEntries = selected.map { entry ->
             ArbEntry(
-                key = key,
-                value = item.raw,
-                translations = translationsByKey[key].orEmpty(),
+                key = entry.key,
+                value = entry.editedValue,
+                translations = translationsByKey[entry.key].orEmpty(),
             )
         }
 
-        if (!ArbManager.addEntries(project, config, arbEntries)) {
+        if (!ArbManager.appendEntries(project, config, arbEntries)) {
             Messages.showErrorDialog(project, "Failed to update ARB files.", "Flutter L10n")
             return
         }
@@ -62,20 +61,20 @@ class ExtractStringsAction : AnAction() {
             val replacement: ReplacementStrategy.Result,
         )
 
-        val resolved = selected.map { (item, key) ->
-            val psiAtOffset = psiFile.findElementAt(item.startOffset)
+        val resolved = selected.map { entry ->
+            val psiAtOffset = psiFile.findElementAt(entry.extracted.startOffset)
             val replacement = if (psiAtOffset != null) {
-                ReplacementStrategy.resolve(psiAtOffset, key, config.outputClass)
+                ReplacementStrategy.resolve(psiAtOffset, entry.key, config.outputClass)
             } else {
                 ReplacementStrategy.Result(
-                    expression = "${config.outputClass}.of(context)!.$key",
-                    kind = ReplacementStrategy.Kind.ContextRaw,
-                    needsL10nProvidersImport = false,
-                    needsAppLocalizationsImport = true,
+                    expression = "ref.watch(l10nProvider).${entry.key}",
+                    kind = ReplacementStrategy.Kind.RiverpodRef,
+                    needsL10nProvidersImport = true,
+                    needsAppLocalizationsImport = false,
                     needsL10nExtensionImport = false,
                 )
             }
-            Resolved(item, key, replacement)
+            Resolved(entry.extracted, entry.key, replacement)
         }
 
         WriteCommandAction.runWriteCommandAction(project, "Extract Strings to L10n", null, Runnable {

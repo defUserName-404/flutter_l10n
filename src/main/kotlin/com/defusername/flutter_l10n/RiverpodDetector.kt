@@ -37,7 +37,7 @@ object RiverpodDetector {
         return RefScope.None
     }
 
-    private fun looksLikeNotifierScope(className: String, text: String): Boolean {
+    fun looksLikeNotifierScope(className: String, text: String): Boolean {
         if (!className.contains("Class", ignoreCase = true) &&
             !className.contains("Method", ignoreCase = true)
         ) {
@@ -51,7 +51,7 @@ object RiverpodDetector {
             text.contains(" extends _$")
     }
 
-    private fun looksLikeWidgetRefParamScope(className: String, text: String): Boolean {
+    fun looksLikeWidgetRefParamScope(className: String, text: String): Boolean {
         if (!className.contains("Method", ignoreCase = true) &&
             !className.contains("Function", ignoreCase = true)
         ) {
@@ -66,7 +66,7 @@ object RiverpodDetector {
         return false
     }
 
-    private fun looksLikeProviderRefParamScope(className: String, text: String): Boolean {
+    fun looksLikeProviderRefParamScope(className: String, text: String): Boolean {
         if (!className.contains("Function", ignoreCase = true) &&
             !className.contains("Method", ignoreCase = true)
         ) {

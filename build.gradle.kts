@@ -21,6 +21,12 @@ dependencies {
         localPlugin("${project.rootDir}/build/deps/DartPlugin/Dart")
     }
     implementation("org.json:json:20240303")
+    testImplementation(kotlin("test"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.0")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 intellijPlatform {
