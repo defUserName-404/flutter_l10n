@@ -1,0 +1,51 @@
+<idea-plugin>
+    <id>com.defusername.flutter_l10n</id>
+    <name>Flutter L10n</name>
+    <version>1.0.0</version>
+    <vendor>defusername</vendor>
+
+    <description><![CDATA[
+        Finds raw strings in Dart files using PSI (not regex), extracts them to ARB
+        localization files, auto-imports AppLocalizations or Riverpod l10nProvider,
+        detects BuildContext / WidgetRef scope, and runs <code>flutter gen-l10n</code>
+        automatically.
+    ]]></description>
+
+    <!-- Core IntelliJ platform -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <!--
+        Dart plugin — REQUIRED.
+        Gives access to DartStringLiteralExpression, DartMethodDeclaration,
+        DartClassDefinition, and the rest of the Dart PSI tree.
+        Without this line the plugin will fail to load on startup.
+    -->
+    <depends>Dart</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!--
+            Notification group used by GenL10nRunner to show
+        -->
+        <notificationGroup
+            id="Flutter L10n"
+            displayType="BALLOON"
+            isLogByDefault="true"/>
+    </extensions>
+
+    <actions>
+        <action
+            id="FlutterL10n.ExtractStrings"
+            class="com.defusername.flutter_l10n.ExtractStringsAction"
+            text="Extract Strings to L10n"
+            description="Find raw strings and add them to app_en.arb">
+
+            <!-- Right-click context menu inside the editor -->
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+
+            <!-- Ctrl+Shift+L on Windows/Linux -->
+            <keyboard-shortcut keymap="$default"      first-keystroke="ctrl shift L"/>
+            <!-- Cmd+Shift+L on macOS -->
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta shift L"/>
+        </action>
+    </actions>
+</idea-plugin>
