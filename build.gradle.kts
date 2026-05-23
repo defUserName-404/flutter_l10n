@@ -19,7 +19,8 @@ intellij {
     // "Dart" plugin provides all Dart PSI classes:
     //   DartStringLiteralExpression, DartMethodDeclaration,
     //   DartClassDefinition, DartFormalParameterList, etc.
-    plugins.set(listOf("Dart"))
+    // Pin an IntelliJ 2024.1-compatible Dart plugin build.
+    plugins.set(listOf("Dart:241.14494.17"))
 }
 
 dependencies {
