@@ -1,9 +1,11 @@
 package com.defusername.flutter_l10n.arb
 
+import com.intellij.openapi.diagnostic.Logger
 import com.defusername.flutter_l10n.ArbEntry
 import org.json.JSONObject
 
 object ArbUpsertService {
+    private val logger = Logger.getInstance(ArbUpsertService::class.java)
     fun upsertContent(
         existingText: String,
         entries: List<ArbEntry>,
@@ -40,7 +42,10 @@ object ArbUpsertService {
 
     private fun parseArbText(text: String): ParsedArbFile {
         val parsedJson = runCatching { JSONObject(text) }.getOrNull()
-            ?: return ParsedArbFile(emptyList(), linkedMapOf())
+        if (parsedJson == null) {
+            logger.warn("Failed to parse ARB file – content may be invalid JSON; existing entries will be lost")
+            return ParsedArbFile(emptyList(), linkedMapOf())
+        }
 
         val headers = mutableListOf<String>()
         val entries = linkedMapOf<String, String>()
@@ -92,21 +97,15 @@ object ArbUpsertService {
         documentLines.add("{")
 
         val headerLines = buildHeaderLines(locale, preservedHeaders)
-        if (headerLines.isNotEmpty()) {
-            documentLines.addAll(withCommas(headerLines).map { "  $it" })
-        }
-
         val entryLines = buildEntryLines(entries)
-        if (entryLines.isNotEmpty()) {
-            val needsLeadingComma = headerLines.isNotEmpty()
-            val prefixedEntryLines = if (needsLeadingComma) {
-                withLeadingComma(entryLines)
-            } else {
-                entryLines
-            }
-            documentLines.addAll(prefixedEntryLines.map { "  $it" })
+
+        for ((i, header) in headerLines.withIndex()) {
+            val isLast = i == headerLines.lastIndex
+            val trailingComma = !isLast || entryLines.isNotEmpty()
+            documentLines.add("  $header${if (trailingComma) "," else ""}")
         }
 
+        documentLines.addAll(entryLines.map { "  $it" })
         documentLines.add("}")
         return documentLines.joinToString(separator = "\n", postfix = "\n")
     }
@@ -138,22 +137,6 @@ object ArbUpsertService {
         }
 
         return lines
-    }
-
-    private fun withCommas(lines: List<String>): List<String> {
-        if (lines.isEmpty()) return lines
-        val result = lines.toMutableList()
-        for (i in 0 until result.lastIndex) {
-            result[i] = "${result[i]},"
-        }
-        return result
-    }
-
-    private fun withLeadingComma(lines: List<String>): List<String> {
-        if (lines.isEmpty()) return lines
-        val result = lines.toMutableList()
-        result[0] = ",${result[0]}"
-        return result
     }
 
     private fun formatJsonValue(value: Any?): String {
